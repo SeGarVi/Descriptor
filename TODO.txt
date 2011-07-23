@@ -1,0 +1,2 @@
+- Implementar descriptor.
+	- Comprobar como funciona el adaptive threshold.
