@@ -17,6 +17,7 @@ lista_puntos *new_lista_puntos() {
 
 	lista -> first = 0;
 	lista -> last  = 0;
+	lista -> size  = 0;
 
 	return lista;
 }

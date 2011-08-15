@@ -15,6 +15,7 @@
 #include "punto.h"
 #include "lista_puntos.h"
 #include "descriptor_debug.h"
+#include "ext_cv_funcs.h"
 
 
 /******************************
@@ -32,7 +33,7 @@ static int n_centros;
 /******************************
  * Imagenes para el debugging *
  ******************************/
-static IplImage* src = 0;
+static IplImage *src = 0;
 static IplImage *image, *image2;
 
 
@@ -451,7 +452,7 @@ static lista_puntos **clasificar_centros(lista_puntos *centros,
 	}
 
 	limites_y = (int *)malloc(divisiones_alto*sizeof(int));
-	for (i = 0; i < divisiones_alto; i++) {
+	for (i = 0; i < divisiones_alto; i++) {	//cvShowImage("Erosion&Dilation window",src);
 		limites_y[i] = alto/divisiones_alto * (i+1);
 	}
 
@@ -465,58 +466,18 @@ static lista_puntos **clasificar_centros(lista_puntos *centros,
 	return clasificados;
 }
 
-static lista_puntos *obtener_centros(CvSeq *contour, IplImage *src, int total) {
-	lista_puntos *centros;
-	CvPoint      pt[10000]; //Hacer un for para saber como?
-	CvSeq       *cont;
-	punto       *p;
-	int 		 i, n;
-
-	centros = new_lista_puntos();
-	cont	 = contour;
-
-	for(n=0 ; cont != 0; n++) {
-		p = new_punto();
-		p->x = p->y = 0;
-
-		CvSeq* result = cont;
-		for (i=0; i<result->total;i++)	{
-			pt[i] = *(CvPoint*)cvGetSeqElem( result, i );
-			p->x += pt[i].x;
-			p->y += pt[i].y;
-		}
-		p->x /= result->total;
-		p->y /= result->total;
-
-		add_punto(centros, p);
-
-		if (cont->v_next!=0) {
-			 cont = cont->v_next;
-		} else {
-			 cont = cont->h_next;
-		}
-	}
-	n_centros = centros -> size;
-
-	return centros;
-}
-
-static lista_puntos *encontrar_centros(IplImage **src) {
+static lista_puntos **encontrar_centros(IplImage **src) {
 	CvMemStorage* storage = cvCreateMemStorage(0);
 	CvSeq* contour = 0;
 	int num_contornos, j;
 	nodo_punto *nodo;
 	//int **centros;
-	lista_puntos *centros;
+	lista_puntos *centros, *centros2;
 	lista_puntos **centros_clasificados;
 	int nCeldas;
 
-	CvPoint pt=cvPoint(0, 0);
+	centros = encontrar_centroides(*src);
 
-	num_contornos = cvFindContours(*src, storage, &contour , sizeof(CvContour),
-								   CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, pt );
-
-	centros = obtener_centros(contour, *src, num_contornos);
 	centros_clasificados = clasificar_centros(centros,
 											  (*src) -> width,
 											  (*src) -> height,
@@ -548,25 +509,32 @@ static lista_puntos *encontrar_centros(IplImage **src) {
 static IplImage *pre_procesar(IplImage *original,
 							  IplImage *a_modificar) {
 
-	cvCvtColor(original, a_modificar, CV_RGB2GRAY);
-	cvAdaptiveThreshold(a_modificar					 , a_modificar	   , 255,
-						CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
-	cvSmooth(a_modificar, a_modificar, CV_GAUSSIAN, 15, 15, 9, 0);
-	//cvAdaptiveThreshold(aModificar, aModificar, 128, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
-	cvThreshold(a_modificar, a_modificar, 210, 255, CV_THRESH_BINARY);
+	a_modificar = convertir_a_grises(original);
+
+	if (a_modificar != 0) {
+		cvAdaptiveThreshold(a_modificar					 , a_modificar	   , 255,
+							CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
+		cvSmooth(a_modificar, a_modificar, CV_GAUSSIAN, 15, 15, 9, 0);
+		//cvAdaptiveThreshold(aModificar, aModificar, 128, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
+		//cvAdaptiveThreshold(a_modificar					 , a_modificar	   , 255,
+		//						CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
+		cvThreshold(a_modificar, a_modificar, 210, 255, CV_THRESH_BINARY);
+	} else {
+		fprintf(stderr, "La imagen de origen no tiene tres canales de color");
+		exit(-1);
+	}
 
 	return a_modificar;
 }
 
-
 float **descriptor(char* file_name) {
-	clock_t fin, ini;
+	float 		 **descriptor;
+	lista_puntos **centroides;
+	clock_t 	   fin, ini;
 
-	if( (src = cvLoadImage(file_name,1)) == 0 ) return -1;
+	if( (src = cvLoadImage(file_name,1)) == 0 ) return ((float **)0);
 	image = cvCreateImage(cvSize( src -> width, src -> height ),
 						  IPL_DEPTH_8U, 1 );
-	float **descriptor;
-	lista_puntos **centroides;
 
 
 	//create windows for output images
@@ -585,7 +553,6 @@ float **descriptor(char* file_name) {
 
 	cvShowImage("Procesada",image2);
 
-	//cvShowImage("Erosion&Dilation window",src);
 	cvWaitKey(0);
 
 	//releases header an dimage data
