@@ -448,19 +448,23 @@ static lista_puntos **clasificar_centros(lista_puntos *centros,
 
 	limites_x = (int *)malloc(divisiones_ancho*sizeof(int));
 	for (i = 0; i < divisiones_ancho; i++) {
-		limites_x[i] = ancho/divisiones_ancho * (i+1);
+		limites_x[i] = (ancho * (i+1))/divisiones_ancho;
 	}
 
 	limites_y = (int *)malloc(divisiones_alto*sizeof(int));
 	for (i = 0; i < divisiones_alto; i++) {	//cvShowImage("Erosion&Dilation window",src);
-		limites_y[i] = alto/divisiones_alto * (i+1);
+		limites_y[i] = (alto * (i+1))/divisiones_alto;
 	}
 
 	for (nodo = centros -> first; nodo != 0; nodo = nodo -> next) {
 		for (x = 0; x < divisiones_ancho && !(nodo -> p -> x < limites_x[x]); x++);
 		for (y = 0; y < divisiones_alto  && !(nodo -> p -> y < limites_y[y]); y++);
 
-		add_punto(clasificados[y * divisiones_ancho + x], nodo -> p);
+		if (nodo -> p -> x == 775 && nodo -> p -> y == 2590) {
+			add_punto(clasificados[y * divisiones_ancho + x], nodo -> p);
+		} else {
+			add_punto(clasificados[y * divisiones_ancho + x], nodo -> p);
+		}
 	}
 
 	return clasificados;
@@ -514,7 +518,8 @@ static IplImage *pre_procesar(IplImage *original,
 	if (a_modificar != 0) {
 		cvAdaptiveThreshold(a_modificar					 , a_modificar	   , 255,
 							CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
-		cvSmooth(a_modificar, a_modificar, CV_GAUSSIAN, 15, 15, 9, 0);
+		a_modificar = suavizar(a_modificar);
+		//cvSmooth(a_modificar, a_modificar, CV_GAUSSIAN, 15, 15, 9, 0);
 		//cvAdaptiveThreshold(aModificar, aModificar, 128, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
 		//cvAdaptiveThreshold(a_modificar					 , a_modificar	   , 255,
 		//						CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
