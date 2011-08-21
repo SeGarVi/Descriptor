@@ -516,8 +516,9 @@ static IplImage *pre_procesar(IplImage *original,
 	a_modificar = convertir_a_grises(original);
 
 	if (a_modificar != 0) {
-		cvAdaptiveThreshold(a_modificar					 , a_modificar	   , 255,
-							CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
+		a_modificar = adaptive_threshold(a_modificar, 255, 9);
+//		cvAdaptiveThreshold(a_modificar					 , a_modificar	   , 255,
+//							CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
 		a_modificar = suavizar(a_modificar);
 		//cvSmooth(a_modificar, a_modificar, CV_GAUSSIAN, 15, 15, 9, 0);
 		//cvAdaptiveThreshold(aModificar, aModificar, 128, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);

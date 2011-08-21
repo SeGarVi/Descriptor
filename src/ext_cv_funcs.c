@@ -28,6 +28,87 @@ static uchar clamp(uchar c);
 static Nucleo *crear_nucleo (int radio);
 
 
+IplImage *convertir_a_grises(IplImage *src) {
+	int i, j;
+	int src_width, src_height, src_step, src_channels, ret_step;
+	uchar *src_data;
+	IplImage *ret;
+
+	if (src -> nChannels == 3) {
+		src_data	 = src -> imageData;
+		src_width        = src -> width;
+		src_height       = src -> height;
+		src_step     = src -> widthStep;
+		src_channels = src -> nChannels;
+		ret_step	 = src_step/src_channels;
+
+
+		ret = cvCreateImage(cvSize( src -> width, src -> height ),
+							IPL_DEPTH_8U, 1 );
+
+		for (i = 0; i < src_height; i++) {
+			for (j = 0; j < src_width; j++) {
+				ret -> imageData[i*ret_step + j] =
+					((uchar)src_data[i*src_step + j * src_channels])     * 0.3  +
+					((uchar)src_data[i*src_step + j * src_channels + 1]) * 0.59 +
+					((uchar)src_data[i*src_step + j * src_channels + 2]) * 0.11;
+			}
+		}
+	} else {
+		ret = 0;
+	}
+
+
+	return ret;
+}
+
+IplImage *adaptive_threshold (IplImage *src, int max_value, int c) {
+ 	float kernel[9][9] = {{0.0004, 0.0012, 0.0026, 0.0040, 0.0046, 0.0040, 0.0026, 0.0012, 0.0004 },
+ 						  {0.0012, 0.0034, 0.0072, 0.0111, 0.0128, 0.0111, 0.0072, 0.0034, 0.0012 },
+ 						  {0.0026, 0.0072, 0.0149, 0.0230, 0.0267, 0.0230, 0.0149, 0.0072, 0.0026 },
+ 						  {0.0040, 0.0111, 0.0230, 0.0357, 0.0413, 0.0357, 0.0230, 0.0111, 0.0040 },
+ 						  {0.0046, 0.0128, 0.0267, 0.0413, 0.0478, 0.0413, 0.0267, 0.0128, 0.0046 },
+ 						  {0.0040, 0.0111, 0.0230, 0.0357, 0.0413, 0.0357, 0.0230, 0.0111, 0.0040 },
+ 						  {0.0026, 0.0072, 0.0149, 0.0230, 0.0267, 0.0230, 0.0149, 0.0072, 0.0026 },
+ 						  {0.0012, 0.0034, 0.0072, 0.0111, 0.0128, 0.0111, 0.0072, 0.0034, 0.0012 },
+ 						  {0.0004, 0.0012, 0.0026, 0.0040, 0.0046, 0.0040, 0.0026, 0.0012, 0.0004 }};
+
+ 	int x, y, i , j, step;
+	float v_acum, p_acum;
+	IplImage *ret;
+
+ 	ret = cvCreateImage(cvSize( src -> width, src -> height ),
+ 						IPL_DEPTH_8U, 1 );
+
+	step = src -> widthStep;
+
+	v_acum = 0;
+	p_acum = 0;
+ 	for (y = 0; y < src -> height; y++) {
+ 		for (x = 0; x < src -> width; x++) {
+ 			for (i = -4; i <= 4; i++) {
+ 				if ((y + i >= 0) && (y + i <= src -> height)) {
+					for (j = -4; j <= 4; j++) {
+						if ((x + j >= 0) && (x + j <= src -> width)) {
+
+							v_acum += ((uchar)(src -> imageData[(y + i)*step+x + j])) *
+									 kernel[i+4][j+4];
+							p_acum += kernel[i+4][j+4];
+						}
+					}
+ 				}
+ 			}
+ 			if (((uchar)src -> imageData [y*step+x]) > ((uchar)(v_acum / p_acum) - c))
+ 				ret -> imageData [y*step+x] = (uchar)max_value;
+ 			else
+ 				ret -> imageData [y*step+x] = (uchar)0;
+
+			v_acum = 0;
+			p_acum = 0;
+ 		}
+ 	}
+	return ret;
+}
 
 IplImage *suavizar(IplImage *src) {
  	float kernel[9][9] = {{0.0004, 0.0012, 0.0026, 0.0040, 0.0046, 0.0040, 0.0026, 0.0012, 0.0004 },
@@ -73,41 +154,6 @@ IplImage *suavizar(IplImage *src) {
  	}
 	return ret;
 }
-
-IplImage *convertir_a_grises(IplImage *src) {
-	int i, j;
-	int src_width, src_height, src_step, src_channels, ret_step;
-	uchar *src_data;
-	IplImage *ret;
-
-	if (src -> nChannels == 3) {
-		src_data	 = src -> imageData;
-		src_width        = src -> width;
-		src_height       = src -> height;
-		src_step     = src -> widthStep;
-		src_channels = src -> nChannels;
-		ret_step	 = src_step/src_channels;
-
-
-		ret = cvCreateImage(cvSize( src -> width, src -> height ),
-							IPL_DEPTH_8U, 1 );
-
-		for (i = 0; i < src_height; i++) {
-			for (j = 0; j < src_width; j++) {
-				ret -> imageData[i*ret_step + j] =
-					((uchar)src_data[i*src_step + j * src_channels])     * 0.3  +
-					((uchar)src_data[i*src_step + j * src_channels + 1]) * 0.59 +
-					((uchar)src_data[i*src_step + j * src_channels + 2]) * 0.11;
-			}
-		}
-	} else {
-		ret = 0;
-	}
-
-
-	return ret;
-}
-
 
 
 /*****************************************************************/
