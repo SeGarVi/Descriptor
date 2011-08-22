@@ -10,6 +10,7 @@
 
 IplImage 	 *convertir_a_grises(IplImage *);
 IplImage 	 *adaptive_threshold (IplImage *src, int max_value, int c);
+IplImage 	 *threshold (IplImage *src, int max_value);
 IplImage 	 *suavizar(IplImage *src);
 lista_puntos *encontrar_centroides(IplImage *);
 

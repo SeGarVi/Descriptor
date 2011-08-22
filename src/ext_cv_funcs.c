@@ -111,15 +111,6 @@ IplImage *adaptive_threshold (IplImage *src, int max_value, int c) {
 }
 
 IplImage *suavizar(IplImage *src) {
- 	float kernel[9][9] = {{0.0004, 0.0012, 0.0026, 0.0040, 0.0046, 0.0040, 0.0026, 0.0012, 0.0004 },
- 						  {0.0012, 0.0034, 0.0072, 0.0111, 0.0128, 0.0111, 0.0072, 0.0034, 0.0012 },
- 						  {0.0026, 0.0072, 0.0149, 0.0230, 0.0267, 0.0230, 0.0149, 0.0072, 0.0026 },
- 						  {0.0040, 0.0111, 0.0230, 0.0357, 0.0413, 0.0357, 0.0230, 0.0111, 0.0040 },
- 						  {0.0046, 0.0128, 0.0267, 0.0413, 0.0478, 0.0413, 0.0267, 0.0128, 0.0046 },
- 						  {0.0040, 0.0111, 0.0230, 0.0357, 0.0413, 0.0357, 0.0230, 0.0111, 0.0040 },
- 						  {0.0026, 0.0072, 0.0149, 0.0230, 0.0267, 0.0230, 0.0149, 0.0072, 0.0026 },
- 						  {0.0012, 0.0034, 0.0072, 0.0111, 0.0128, 0.0111, 0.0072, 0.0034, 0.0012 },
- 						  {0.0004, 0.0012, 0.0026, 0.0040, 0.0046, 0.0040, 0.0026, 0.0012, 0.0004 }};
 
  	int x, y, i , j, step;
 	float v_acum, p_acum;
@@ -131,30 +122,48 @@ IplImage *suavizar(IplImage *src) {
 	step = src -> widthStep;
 
 	v_acum = 0;
-	p_acum = 0;
+		p_acum = 0;
+	 	for (y = 0; y < src -> height; y++) {
+	 		for (x = 0; x < src -> width; x++) {
+	 			for (i = -6; i <= 6; i++) {
+	 				if ((y + i >= 0) && (y + i <= src -> height)) {
+						for (j = -6; j <= 6; j++) {
+							if ((x + j >= 0) && (x + j <= src -> width)) {
+								v_acum += ((uchar)(src -> imageData[(y + i)*step+x + j]));
+								p_acum ++;
+							}
+						}
+	 				}
+	 			}
+	 			ret -> imageData [y*step+x] = ((uchar)(v_acum / p_acum));
+
+				v_acum = 0;
+				p_acum = 0;
+	 		}
+	 	}
+
+	return ret;
+}
+
+IplImage *threshold (IplImage *src, int max_value) {
+ 	int x, y, step;
+	IplImage *ret;
+
+ 	ret = cvCreateImage(cvSize( src -> width, src -> height ),
+ 						IPL_DEPTH_8U, 1 );
+
+	step = src -> widthStep;
+
  	for (y = 0; y < src -> height; y++) {
  		for (x = 0; x < src -> width; x++) {
- 			for (i = -4; i <= 4; i++) {
- 				if ((y + i >= 0) && (y + i <= src -> height)) {
-					for (j = -4; j <= 4; j++) {
-						if ((x + j >= 0) && (x + j <= src -> width)) {
-
-							v_acum += ((uchar)(src -> imageData[(y + i)*step+x + j])) *
-									 kernel[i+4][j+4];
-							p_acum += kernel[i+4][j+4];
-						}
-					}
- 				}
- 			}
- 			ret -> imageData [y*step+x] = ((uchar)(v_acum / p_acum));
-
-			v_acum = 0;
-			p_acum = 0;
+ 			if (((uchar)src -> imageData [y*step+x]) > max_value)
+ 					ret -> imageData [y*step+x] = 255;
+ 			else
+ 					ret -> imageData [y*step+x] = 0;
  		}
  	}
 	return ret;
 }
-
 
 /*****************************************************************/
 /********** Codigo basado en el algoritmo para encontrar *********/

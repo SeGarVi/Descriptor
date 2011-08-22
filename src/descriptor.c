@@ -517,14 +517,8 @@ static IplImage *pre_procesar(IplImage *original,
 
 	if (a_modificar != 0) {
 		a_modificar = adaptive_threshold(a_modificar, 255, 9);
-//		cvAdaptiveThreshold(a_modificar					 , a_modificar	   , 255,
-//							CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
 		a_modificar = suavizar(a_modificar);
-		//cvSmooth(a_modificar, a_modificar, CV_GAUSSIAN, 15, 15, 9, 0);
-		//cvAdaptiveThreshold(aModificar, aModificar, 128, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
-		//cvAdaptiveThreshold(a_modificar					 , a_modificar	   , 255,
-		//						CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
-		cvThreshold(a_modificar, a_modificar, 210, 255, CV_THRESH_BINARY);
+		a_modificar = threshold(a_modificar, 210);
 	} else {
 		fprintf(stderr, "La imagen de origen no tiene tres canales de color");
 		exit(-1);
@@ -534,6 +528,7 @@ static IplImage *pre_procesar(IplImage *original,
 }
 
 float **descriptor(char* file_name) {
+	float		  *tiempos;
 	float 		 **descriptor;
 	lista_puntos **centroides;
 	clock_t 	   fin, ini;
@@ -542,6 +537,7 @@ float **descriptor(char* file_name) {
 	image = cvCreateImage(cvSize( src -> width, src -> height ),
 						  IPL_DEPTH_8U, 1 );
 
+	tiempos = (float *)malloc(5*sizeof(float));
 
 	//create windows for output images
 	cvNamedWindow("Original",1);
