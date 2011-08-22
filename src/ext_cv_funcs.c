@@ -18,16 +18,6 @@ typedef struct {
 	float *matriz;
 }Nucleo;
 
-static void convolve_and_transpose (Nucleo *nucleo,
-		  	  	  	  	  	  	  	uchar  *in_pixels,
-		  	  	  	  	  	  	  	uchar  *out_pixels,
-									int 	width,
-									int	  	height,
-									int 	step);
-static uchar clamp(uchar c);
-static Nucleo *crear_nucleo (int radio);
-
-
 IplImage *convertir_a_grises(IplImage *src) {
 	int i, j;
 	int src_width, src_height, src_step, src_channels, ret_step;

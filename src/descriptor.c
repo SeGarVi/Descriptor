@@ -196,7 +196,6 @@ static float *calcular_descriptor_centroide(nodo_punto *punt,
 											int **combinaciones) {
 	int   i;
 	float *descriptor_punto;
-	punto  *centroide;
 	punto **cercanos;
 	nodo_cercano *iterador;
 
@@ -210,7 +209,6 @@ static float *calcular_descriptor_centroide(nodo_punto *punt,
 		cercanos[i++] = iterador -> p;
 	}
 
-	centroide = punt -> p;
 	for (i = 0; i < n_combinaciones; i++) {
 		descriptor_punto[i] = cross_ratio(combinaciones[i], cercanos);
 	}
@@ -359,13 +357,10 @@ static void buscar_mas_cercanos(int 		  celda,
 
 	nodo_punto  **mas_cercanos;
 	float		*distancias, *angulos;
-	int 		 i, j, k,  n_nodos,
-				 mayor,    celda_actual,
-				 n_celdas, max_distancia;
+	int 		 i, j, k,  n_nodos, celda_actual, n_celdas, max_distancia;
 	int 		*celdas_donde_buscar;
 
 	n_nodos = 0;
-	mayor  = 0;
 	max_distancia = ancho*alto;
 
 	distancias = (float *)malloc(cantidad_cercanos*sizeof(float));
@@ -471,14 +466,10 @@ static lista_puntos **clasificar_centros(lista_puntos *centros,
 }
 
 static lista_puntos **encontrar_centros(IplImage **src) {
-	CvMemStorage* storage = cvCreateMemStorage(0);
-	CvSeq* contour = 0;
-	int num_contornos, j;
 	nodo_punto *nodo;
-	//int **centros;
-	lista_puntos *centros, *centros2;
+	lista_puntos *centros;
 	lista_puntos **centros_clasificados;
-	int nCeldas;
+	int nCeldas, j;
 
 	centros = encontrar_centroides(*src);
 
@@ -528,42 +519,16 @@ static IplImage *pre_procesar(IplImage *original,
 }
 
 float **descriptor(char* file_name) {
-	float		  *tiempos;
 	float 		 **descriptor;
 	lista_puntos **centroides;
-	clock_t 	   fin, ini;
 
 	if( (src = cvLoadImage(file_name,1)) == 0 ) return ((float **)0);
 	image = cvCreateImage(cvSize( src -> width, src -> height ),
 						  IPL_DEPTH_8U, 1 );
 
-	tiempos = (float *)malloc(5*sizeof(float));
-
-	//create windows for output images
-	cvNamedWindow("Original",1);
-	cvNamedWindow("Procesada",1);
-
-	cvShowImage("Original",src);
-
-	ini = clock() / (CLOCKS_PER_SEC / 1000);
 	image2 = pre_procesar(src, image);
 	centroides = encontrar_centros(&image2);
 	descriptor = calcular_descriptor_documento(centroides);
-	fin = clock() / (CLOCKS_PER_SEC / 1000);
-
-	fprintf(stdout, "Tiempo = %d\n", fin-ini);
-
-	cvShowImage("Procesada",image2);
-
-	cvWaitKey(0);
-
-	//releases header an dimage data
-	cvReleaseImage(&src);
-	cvReleaseImage(&image);
-
-	//destroys windows cvDestroyWindow("Opening&Closing window");
-	cvDestroyWindow("Original");
-	cvDestroyWindow("Procesada");
 
 	return descriptor;
 }
