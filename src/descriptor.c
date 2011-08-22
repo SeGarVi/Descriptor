@@ -34,8 +34,7 @@ static int n_centros;
  * Imagenes para el debugging *
  ******************************/
 static IplImage *src = 0;
-static IplImage *image, *image2;
-
+static IplImage *image;
 
 static int ja = 0;
 
@@ -166,6 +165,7 @@ static float cross_ratio(int   *combinacion,
 						 punto **cercanos){
 	punto **triangulo;
 	float  *areas;
+	float	res;
 
 	areas = (float *)malloc(4 * sizeof(float));
 
@@ -188,7 +188,11 @@ static float cross_ratio(int   *combinacion,
 	triangulo[2] = cercanos[4];
 	areas[3] = calcular_area(triangulo);
 
-	return (areas[0] * areas[1])/(areas[3] * areas[4]);
+	res = (areas[0] * areas[1])/(areas[3] * areas[4]);
+
+	free(areas);
+
+	return res;
 }
 
 static float *calcular_descriptor_centroide(nodo_punto *punt,
@@ -420,6 +424,9 @@ static void buscar_mas_cercanos(int 		  celda,
 		dibujar_cercanos(punt, src);
 		ja = 1;
 	}
+
+	free(distancias);
+	free(celdas_donde_buscar);
 }
 
 static lista_puntos **clasificar_centros(lista_puntos *centros,
@@ -462,6 +469,9 @@ static lista_puntos **clasificar_centros(lista_puntos *centros,
 		}
 	}
 
+	free(limites_x);
+	free(limites_y);
+
 	return clasificados;
 }
 
@@ -472,6 +482,8 @@ static lista_puntos **encontrar_centros(IplImage **src) {
 	int nCeldas, j;
 
 	centros = encontrar_centroides(*src);
+
+	n_centros = centros -> size;
 
 	centros_clasificados = clasificar_centros(centros,
 											  (*src) -> width,
@@ -526,9 +538,13 @@ float **descriptor(char* file_name) {
 	image = cvCreateImage(cvSize( src -> width, src -> height ),
 						  IPL_DEPTH_8U, 1 );
 
-	image2 = pre_procesar(src, image);
-	centroides = encontrar_centros(&image2);
+	image = pre_procesar(src, image);
+	centroides = encontrar_centros(&image);
 	descriptor = calcular_descriptor_documento(centroides);
+
+	cvReleaseImage(&src);
+	cvReleaseImage(&image);
+	free(centroides);
 
 	return descriptor;
 }

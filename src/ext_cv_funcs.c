@@ -48,7 +48,6 @@ IplImage *convertir_a_grises(IplImage *src) {
 		ret = 0;
 	}
 
-
 	return ret;
 }
 
