@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "descriptor.h"
 
@@ -15,23 +16,45 @@ int main(int argc, char** argv) {
 	int i, j;
 	char* file_name = argc == 2 ? argv[1] : "imgs/rxm78d00-page02_2.tif.jpg";
 	float *profiling;
-	double *tiempos = (double*) malloc (14 * sizeof(double));
+	double **tiempos;
+	double *medias = (double*) malloc (14 * sizeof(double));
+	double *desviaciones = (double*) malloc (14 * sizeof(double));
 	int n_ejecuciones = 10;
 
-	for (j = 0; j < 14; j++)
-		tiempos[j] = 0.0;
+	tiempos = (double**) malloc (n_ejecuciones * sizeof(double*));
 
 	for (i = 0; i < n_ejecuciones; i++) {
 		profiling = descriptor(file_name);
 
+		tiempos[i] = (double*) malloc (14 * sizeof(double));
+
 		for (j = 0; j < 14; j++)
-			tiempos[j] += profiling[j+3];
+			tiempos[i][j] = profiling[j+3];
+	}
+
+	for (j = 0; j < 14; j++)
+		medias[j] = 0;
+
+	for (j = 0; j<14; j++) {
+		for (i = 0; i < n_ejecuciones; i++)
+			medias[j] += tiempos[i][j];
+		medias[j] /= n_ejecuciones;
+	}
+
+	for (j = 0; j<14; j++) {
+		for (i = 0; i < n_ejecuciones; i++)
+			desviaciones[j] += pow(tiempos[i][j] - medias[j], 2);
+		desviaciones[j] /= n_ejecuciones;
+		desviaciones[j] = sqrt(desviaciones[j]);
 	}
 
 	fprintf(stdout, "%d;%d;%d;", (int)profiling[0], (int)profiling[1], (int)profiling[2]);
 	for (i = 0; i < 14; i++)
-		fprintf(stdout, "%f;", (float)(tiempos[i]/n_ejecuciones));
-	fprintf(stdout, "%f", (float)(tiempos[13]/n_ejecuciones));
+		fprintf(stdout, "%f;", (float)medias[i]);
+
+	for (i = 0; i < 13; i++)
+		fprintf(stdout, "%f;", (float)desviaciones[i]);
+	fprintf(stdout, "%f", (float)desviaciones[13]);
 
 	return 0;
 }
