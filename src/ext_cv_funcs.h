@@ -14,4 +14,6 @@ IplImage 	 *threshold (IplImage *src, int max_value);
 IplImage 	 *suavizar(IplImage *src);
 lista_puntos *encontrar_centroides(IplImage *);
 
+float *info_tiempos ();
+
 #endif /* EXT_CV_FUNCS_H_ */

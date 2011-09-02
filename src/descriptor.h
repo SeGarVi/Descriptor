@@ -23,6 +23,6 @@ int get_cantidad_combinacion();
 void enable_debug();
 void disable_debug();
 
-float **descriptor(char* file_name);
+float *descriptor(char* file_name);
 
 #endif /* DESCRIPTOR_H_ */

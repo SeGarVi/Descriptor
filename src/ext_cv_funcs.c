@@ -7,10 +7,18 @@
 
 #include <cv.h>
 #include <math.h>
+#include <time.h>
+
 #include "lista_puntos.h"
 
 static uchar *data;
 static int    step;
+
+static float t_suavizar,
+			 t_adaptive_threshold,
+			 t_convertir_a_grises,
+			 t_threshold,
+			 t_encontrar_centroides;
 
 typedef struct {
 	int    height;
@@ -23,6 +31,10 @@ IplImage *convertir_a_grises(IplImage *src) {
 	int src_width, src_height, src_step, src_channels, ret_step;
 	uchar *src_data;
 	IplImage *ret;
+
+	clock_t fin, ini;
+
+	ini = clock() / (CLOCKS_PER_SEC / 1000);
 
 	if (src -> nChannels == 3) {
 		src_data	 = src -> imageData;
@@ -48,6 +60,9 @@ IplImage *convertir_a_grises(IplImage *src) {
 		ret = 0;
 	}
 
+	fin = clock() / (CLOCKS_PER_SEC / 1000);
+	t_convertir_a_grises = fin - ini;
+
 	return ret;
 }
 
@@ -66,6 +81,9 @@ IplImage *adaptive_threshold (IplImage *src, int max_value, int c) {
 	float v_acum, p_acum;
 	IplImage *ret;
 
+    clock_t fin, ini;
+    ini = clock() / (CLOCKS_PER_SEC / 1000);
+
  	ret = cvCreateImage(cvSize( src -> width, src -> height ),
  						IPL_DEPTH_8U, 1 );
 
@@ -76,9 +94,9 @@ IplImage *adaptive_threshold (IplImage *src, int max_value, int c) {
  	for (y = 0; y < src -> height; y++) {
  		for (x = 0; x < src -> width; x++) {
  			for (i = -4; i <= 4; i++) {
- 				if ((y + i >= 0) && (y + i <= src -> height)) {
+ 				if ((y + i >= 0) && (y + i < src -> height)) {
 					for (j = -4; j <= 4; j++) {
-						if ((x + j >= 0) && (x + j <= src -> width)) {
+						if ((x + j >= 0) && (x + j < src -> width)) {
 
 							v_acum += ((uchar)(src -> imageData[(y + i)*step+x + j])) *
 									 kernel[i+4][j+4];
@@ -96,6 +114,10 @@ IplImage *adaptive_threshold (IplImage *src, int max_value, int c) {
 			p_acum = 0;
  		}
  	}
+
+   	fin = clock() / (CLOCKS_PER_SEC / 1000);
+    t_adaptive_threshold = fin - ini;
+
 	return ret;
 }
 
@@ -105,31 +127,37 @@ IplImage *suavizar(IplImage *src) {
 	float v_acum, p_acum;
 	IplImage *ret;
 
+	clock_t fin, ini;
+	ini = clock() / (CLOCKS_PER_SEC / 1000);
+
  	ret = cvCreateImage(cvSize( src -> width, src -> height ),
  						IPL_DEPTH_8U, 1 );
 
 	step = src -> widthStep;
 
 	v_acum = 0;
-		p_acum = 0;
-	 	for (y = 0; y < src -> height; y++) {
-	 		for (x = 0; x < src -> width; x++) {
-	 			for (i = -6; i <= 6; i++) {
-	 				if ((y + i >= 0) && (y + i <= src -> height)) {
-						for (j = -6; j <= 6; j++) {
-							if ((x + j >= 0) && (x + j <= src -> width)) {
-								v_acum += ((uchar)(src -> imageData[(y + i)*step+x + j]));
-								p_acum ++;
-							}
+	p_acum = 0;
+	for (y = 0; y < src -> height; y++) {
+		for (x = 0; x < src -> width; x++) {
+			for (i = -1; i <= 1; i++) {
+				if ((y + i >= 0) && (y + i < src -> height)) {
+					for (j = -2; j <= 2; j++) {
+						if ((x + j >= 0) && (x + j < src -> width)) {
+							v_acum += ((uchar)(src -> imageData[(y + i)*step+x + j]));
+							p_acum ++;
 						}
-	 				}
-	 			}
-	 			ret -> imageData [y*step+x] = ((uchar)(v_acum / p_acum));
+					}
+				}
+			}
+			ret -> imageData [y*step+x] = ((uchar)(v_acum / p_acum));
 
-				v_acum = 0;
-				p_acum = 0;
-	 		}
-	 	}
+			v_acum = 0;
+			p_acum = 0;
+		}
+	}
+
+	fin = clock() / (CLOCKS_PER_SEC / 1000);
+	t_suavizar = fin - ini;
 
 	return ret;
 }
@@ -137,6 +165,9 @@ IplImage *suavizar(IplImage *src) {
 IplImage *threshold (IplImage *src, int max_value) {
  	int x, y, step;
 	IplImage *ret;
+
+	clock_t fin, ini;
+	ini = clock() / (CLOCKS_PER_SEC / 1000);
 
  	ret = cvCreateImage(cvSize( src -> width, src -> height ),
  						IPL_DEPTH_8U, 1 );
@@ -151,6 +182,10 @@ IplImage *threshold (IplImage *src, int max_value) {
  					ret -> imageData [y*step+x] = 0;
  		}
  	}
+
+ 	fin = clock() / (CLOCKS_PER_SEC / 1000);
+ 	t_threshold = fin - ini;
+
 	return ret;
 }
 
@@ -241,6 +276,10 @@ lista_puntos *encontrar_centroides(IplImage *src) {
 	int n_active_components;
 	Components *component;
 	run *above_run, *left_run, this_run;
+
+
+	clock_t fin, ini;
+	ini = clock() / (CLOCKS_PER_SEC / 1000);
 
 
 	/*********************************************************/
@@ -450,5 +489,20 @@ lista_puntos *encontrar_centroides(IplImage *src) {
 	
 	free(component);
 
+	fin = clock() / (CLOCKS_PER_SEC / 1000);
+	t_encontrar_centroides = fin - ini;
+
 	return centros;
+}
+
+float *info_tiempos (){
+	float *res = (float *) malloc (5*sizeof(float));
+
+	res [0] = t_suavizar;
+	res [1] = t_adaptive_threshold;
+	res [2] = t_convertir_a_grises;
+	res [3] = t_threshold;
+	res [4] = t_encontrar_centroides;
+
+	return res;
 }
