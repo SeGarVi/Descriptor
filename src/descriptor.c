@@ -29,12 +29,31 @@ static int debug = 0;
 
 static int n_centros;
 
+
+/******************************
+ ** Variables para profiling **
+ ******************************/
+static float t_total,
+	  	  	 t_suavizado,
+	  	  	 t_adaptive_threshold,
+	  	  	 t_convertir_grises,
+	  	  	 t_threshold,
+	  	  	 t_encontrar_centroides,
+	  	  	 t_cross_ratio,
+	  	  	 t_buscar_mas_cercanos,
+	  	  	 t_calcular_area,
+	  	  	 t_cercanos_en_celdas,
+	  	  	 t_calcular_descriptor_documento,
+	  	  	 t_clasificar_centros,
+	  	  	 t_encontrar_centros,
+	  	  	 t_preprocesar;
+
+
 /******************************
  * Imagenes para el debugging *
  ******************************/
-static IplImage* src = 0;
-static IplImage *image, *image2;
-
+static IplImage *src = 0;
+static IplImage *image;
 
 static int ja = 0;
 
@@ -142,8 +161,11 @@ static int combinacion_sin_repeticion(int mayor, int menor) {
 
 static float calcular_area(punto **triangulo) {
 	int i;
-	float semiperimetro, distancias[3];
+	float semiperimetro, distancias[3], area;
 	punto vector;
+
+	clock_t fin, ini;
+	ini = clock() / (CLOCKS_PER_SEC / 1000);
 
 	semiperimetro = 0;
 	for (i = 0; i < 3; i++){
@@ -156,15 +178,24 @@ static float calcular_area(punto **triangulo) {
 
 	semiperimetro /= 2;
 
-	return sqrt(semiperimetro*(semiperimetro - distancias[0])*
-							  (semiperimetro - distancias[1])*
-							  (semiperimetro - distancias[2]));
+	area = sqrt(semiperimetro*(semiperimetro - distancias[0])*
+				  (semiperimetro - distancias[1])*
+				  (semiperimetro - distancias[2]));
+
+	fin = clock() / (CLOCKS_PER_SEC / 1000);
+	t_calcular_area = fin - ini;
+
+	return area;
 }
 
 static float cross_ratio(int   *combinacion,
 						 punto **cercanos){
 	punto **triangulo;
 	float  *areas;
+	float	res;
+
+	clock_t fin, ini;
+	ini = clock() / (CLOCKS_PER_SEC / 1000);
 
 	areas = (float *)malloc(4 * sizeof(float));
 
@@ -187,7 +218,14 @@ static float cross_ratio(int   *combinacion,
 	triangulo[2] = cercanos[4];
 	areas[3] = calcular_area(triangulo);
 
-	return (areas[0] * areas[1])/(areas[3] * areas[4]);
+	res = (areas[0] * areas[1])/(areas[3] * areas[4]);
+
+	free(areas);
+
+	fin = clock() / (CLOCKS_PER_SEC / 1000);
+	t_cross_ratio = fin - ini;
+
+	return res;
 }
 
 static float *calcular_descriptor_centroide(nodo_punto *punt,
@@ -195,7 +233,6 @@ static float *calcular_descriptor_centroide(nodo_punto *punt,
 											int **combinaciones) {
 	int   i;
 	float *descriptor_punto;
-	punto  *centroide;
 	punto **cercanos;
 	nodo_cercano *iterador;
 
@@ -209,7 +246,6 @@ static float *calcular_descriptor_centroide(nodo_punto *punt,
 		cercanos[i++] = iterador -> p;
 	}
 
-	centroide = punt -> p;
 	for (i = 0; i < n_combinaciones; i++) {
 		descriptor_punto[i] = cross_ratio(combinaciones[i], cercanos);
 	}
@@ -222,6 +258,10 @@ static float **calcular_descriptor_documento(lista_puntos **centros){
 	int **combinaciones;
 	float **descriptor_documento;
 	nodo_punto *iterador;
+
+	clock_t fin, ini;
+
+	ini = clock() / (CLOCKS_PER_SEC / 1000);
 
 	descriptor_documento = (float **)malloc(n_centros*sizeof(float*));
 
@@ -244,6 +284,9 @@ static float **calcular_descriptor_documento(lista_puntos **centros){
 																	  combinaciones);
 		}
 	}
+
+	fin = clock() / (CLOCKS_PER_SEC / 1000);
+	t_calcular_descriptor_documento = fin - ini;
 
 	return descriptor_documento;
 }
@@ -305,6 +348,10 @@ static void cercanos_en_celdas(int 		  	  celda,
 	float		 distancia, angulo;
 	int			 mayor, i, n_nodos;
 
+	clock_t fin, ini;
+
+	ini = clock() / (CLOCKS_PER_SEC / 1000);
+
 	mayor = 0;
 	for (i = 0; i < cantidad_cercanos && distancias[i] >= 0; i++) {
 		if (distancias[i] > distancias[mayor]) {
@@ -347,6 +394,9 @@ static void cercanos_en_celdas(int 		  	  celda,
 			}
 		}
 	}
+
+	fin = clock() / (CLOCKS_PER_SEC / 1000);
+	t_cercanos_en_celdas = fin - ini;
 }
 
 static void buscar_mas_cercanos(int 		  celda,
@@ -358,13 +408,14 @@ static void buscar_mas_cercanos(int 		  celda,
 
 	nodo_punto  **mas_cercanos;
 	float		*distancias, *angulos;
-	int 		 i, j, k,  n_nodos,
-				 mayor,    celda_actual,
-				 n_celdas, max_distancia;
+	int 		 i, j, k,  n_nodos, celda_actual, n_celdas, max_distancia;
 	int 		*celdas_donde_buscar;
 
+	clock_t fin, ini;
+	//LOGI("buscar_mas_cercanos running");
+	ini = clock() / (CLOCKS_PER_SEC / 1000);
+
 	n_nodos = 0;
-	mayor  = 0;
 	max_distancia = ancho*alto;
 
 	distancias = (float *)malloc(cantidad_cercanos*sizeof(float));
@@ -403,7 +454,7 @@ static void buscar_mas_cercanos(int 		  celda,
 		n_nodos = i;
 	}
 
-	for (j = 2; n_nodos < cantidad_cercanos; j++) {					//Poner un límite (y si solo hay un punto?)
+	for (j = 2; n_nodos < cantidad_cercanos && n_nodos < n_centros - 1; j++) {
 		celdas_donde_buscar = celdas_a_calcular(celda, j, &n_celdas);
 
 		for (k = 0; k<n_celdas && celdas_donde_buscar[k]!=-1; k++) {
@@ -424,6 +475,12 @@ static void buscar_mas_cercanos(int 		  celda,
 		dibujar_cercanos(punt, src);
 		ja = 1;
 	}
+
+	free(distancias);
+	free(celdas_donde_buscar);
+
+	fin = clock() / (CLOCKS_PER_SEC / 1000);
+	t_buscar_mas_cercanos = fin - ini;
 }
 
 static lista_puntos **clasificar_centros(lista_puntos *centros,
@@ -436,6 +493,8 @@ static lista_puntos **clasificar_centros(lista_puntos *centros,
 	int 		  n_celdas, i, x, y;
 	int 		 *limites_x, *limites_y;
 
+	clock_t fin, ini;
+	ini = clock() / (CLOCKS_PER_SEC / 1000);
 
 	n_celdas = divisiones_ancho * divisiones_alto;
 
@@ -447,12 +506,12 @@ static lista_puntos **clasificar_centros(lista_puntos *centros,
 
 	limites_x = (int *)malloc(divisiones_ancho*sizeof(int));
 	for (i = 0; i < divisiones_ancho; i++) {
-		limites_x[i] = ancho/divisiones_ancho * (i+1);
+		limites_x[i] = (ancho * (i+1))/divisiones_ancho;
 	}
 
 	limites_y = (int *)malloc(divisiones_alto*sizeof(int));
 	for (i = 0; i < divisiones_alto; i++) {
-		limites_y[i] = alto/divisiones_alto * (i+1);
+		limites_y[i] = (alto * (i+1))/divisiones_alto;
 	}
 
 	for (nodo = centros -> first; nodo != 0; nodo = nodo -> next) {
@@ -461,6 +520,12 @@ static lista_puntos **clasificar_centros(lista_puntos *centros,
 
 		add_punto(clasificados[y * divisiones_ancho + x], nodo -> p);
 	}
+
+	free(limites_x);
+	free(limites_y);
+
+	fin = clock() / (CLOCKS_PER_SEC / 1000);
+	t_clasificar_centros = fin - ini;
 
 	return clasificados;
 }
@@ -501,100 +566,170 @@ static lista_puntos *obtener_centros(CvSeq *contour, IplImage *src, int total) {
 	return centros;
 }
 
-static lista_puntos *encontrar_centros(IplImage **src) {
-	CvMemStorage* storage = cvCreateMemStorage(0);
-	CvSeq* contour = 0;
-	int num_contornos, j;
+static lista_puntos **encontrar_centros(IplImage **src) {
 	nodo_punto *nodo;
-	//int **centros;
 	lista_puntos *centros;
 	lista_puntos **centros_clasificados;
-	int nCeldas;
-
+	int nCeldas, j;
+	clock_t fin, ini, fin_tmp, ini_tmp;
+	CvMemStorage* storage = cvCreateMemStorage(0);
+	CvSeq* contour = 0;
 	CvPoint pt=cvPoint(0, 0);
 
-	num_contornos = cvFindContours(*src, storage, &contour , sizeof(CvContour),
-								   CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, pt );
+	ini = clock() / (CLOCKS_PER_SEC / 1000);
 
-	centros = obtener_centros(contour, *src, num_contornos);
-	centros_clasificados = clasificar_centros(centros,
-											  (*src) -> width,
-											  (*src) -> height,
-											  *src);
+	ini_tmp = clock() / (CLOCKS_PER_SEC / 1000);
+	n_centros = cvFindContours(*src, storage, &contour , sizeof(CvContour),
+							   CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, pt );
 
-	nCeldas = divisiones_ancho * divisiones_alto;
-	for (j = 0; j < nCeldas; j++) {
-		for (nodo = centros_clasificados[j] -> first;
-				nodo != 0;
-				nodo = nodo -> next) {
-			buscar_mas_cercanos(j,
-							    (*src) -> width,
-							    (*src) -> height,
-							    nodo,
-							    centros_clasificados,
-							    *src);
+	centros = obtener_centros(contour, *src, n_centros);
+	fin_tmp = clock() / (CLOCKS_PER_SEC / 1000);
+	t_encontrar_centroides = fin_tmp-ini_tmp;
+
+	if (n_centros > cantidad_cercanos) {
+		centros_clasificados = clasificar_centros(centros,
+												  (*src) -> width,
+												  (*src) -> height,
+												  *src);
+
+		nCeldas = divisiones_ancho * divisiones_alto;
+		for (j = 0; j < nCeldas; j++) {
+			for (nodo = centros_clasificados[j] -> first;
+					nodo != 0;
+					nodo = nodo -> next) {
+				buscar_mas_cercanos(j,
+									(*src) -> width,
+									(*src) -> height,
+									nodo,
+									centros_clasificados,
+									*src);
+			}
+		}
+
+		if (debug) {
+			dibujar_centros(centros, *src);
+			dibujar_rejilla(divisiones_ancho, divisiones_alto, *src);
 		}
 	}
 
-	if (debug) {
-		dibujar_centros(centros, *src);
-		dibujar_rejilla(divisiones_ancho, divisiones_alto, *src);
-	}
+	fin = clock() / (CLOCKS_PER_SEC / 1000);
+
+	t_encontrar_centros = fin - ini;
 
 	return centros_clasificados;
 }
 
-//callback function for slider , implements erosion
 static IplImage *pre_procesar(IplImage *original,
 							  IplImage *a_modificar) {
 
+	clock_t fin, ini, fin_tmp, ini_tmp;
+
+	ini = clock() / (CLOCKS_PER_SEC / 1000);
+
+	ini_tmp = clock() / (CLOCKS_PER_SEC / 1000);
 	cvCvtColor(original, a_modificar, CV_RGB2GRAY);
+	fin_tmp = clock() / (CLOCKS_PER_SEC / 1000);
+	t_convertir_grises = fin_tmp-ini_tmp;
+
+	ini_tmp = clock() / (CLOCKS_PER_SEC / 1000);
 	cvAdaptiveThreshold(a_modificar					 , a_modificar	   , 255,
-						CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
-	cvSmooth(a_modificar, a_modificar, CV_GAUSSIAN, 15, 15, 9, 0);
-	//cvAdaptiveThreshold(aModificar, aModificar, 128, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
+							CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 9, 9);
+	fin_tmp = clock() / (CLOCKS_PER_SEC / 1000);
+	t_adaptive_threshold = fin_tmp-ini_tmp;
+
+	ini_tmp = clock() / (CLOCKS_PER_SEC / 1000);
+	cvSmooth(a_modificar, a_modificar, CV_BLUR, 4, 2, 0, 0);
+	fin_tmp = clock() / (CLOCKS_PER_SEC / 1000);
+	t_suavizado = fin_tmp-ini_tmp;
+
+	ini_tmp = clock() / (CLOCKS_PER_SEC / 1000);
 	cvThreshold(a_modificar, a_modificar, 210, 255, CV_THRESH_BINARY);
+	fin_tmp = clock() / (CLOCKS_PER_SEC / 1000);
+	t_threshold = fin_tmp-ini_tmp;
+
+	fin = clock() / (CLOCKS_PER_SEC / 1000);
+	t_preprocesar = fin-ini;
 
 	return a_modificar;
 }
 
-
-float **descriptor(char* file_name) {
+float *descriptor(char* file_name) {
+	float 		 **descriptor;
+	lista_puntos **centroides = 0;
+	float *t_preproceso;
 	clock_t fin, ini;
+	float *prof = (float *)malloc(17*sizeof(float));
+	int width, height;
 
-	if( (src = cvLoadImage(file_name,1)) == 0 ) return -1;
+	if( (src = cvLoadImage(file_name,1)) == 0 ) return ((float **)0);
 	image = cvCreateImage(cvSize( src -> width, src -> height ),
 						  IPL_DEPTH_8U, 1 );
-	float **descriptor;
-	lista_puntos **centroides;
 
+	if (debug) {
+		cvNamedWindow("Original", 1);
+		cvNamedWindow("Procesada",1);
+		cvShowImage("Original",src);
+	}
 
-	//create windows for output images
-	cvNamedWindow("Original",1);
-	cvNamedWindow("Procesada",1);
-
-	cvShowImage("Original",src);
+	width = src -> width;
+	height = src -> height;
+	t_total = -1.0;
+	t_suavizado = -1.0;
+	t_adaptive_threshold = -1.0;
+	t_convertir_grises = -1.0;
+	t_threshold = -1.0;
+	t_encontrar_centroides = -1.0;
+	t_cross_ratio = -1.0;
+	t_buscar_mas_cercanos = -1.0;
+	t_calcular_area = -1.0;
+	t_cercanos_en_celdas = -1.0;
+	t_calcular_descriptor_documento = -1.0;
+	t_clasificar_centros = -1.0;
+	t_encontrar_centros = -1.0;
+	t_preprocesar = -1.0;
 
 	ini = clock() / (CLOCKS_PER_SEC / 1000);
-	image2 = pre_procesar(src, image);
-	centroides = encontrar_centros(&image2);
-	descriptor = calcular_descriptor_documento(centroides);
-	fin = clock() / (CLOCKS_PER_SEC / 1000);
 
-	fprintf(stdout, "Tiempo = %d\n", fin-ini);
+	image = pre_procesar(src, image);
+	centroides = encontrar_centros(&image);
 
-	cvShowImage("Procesada",image2);
+	if (n_centros > cantidad_cercanos)
+		descriptor = calcular_descriptor_documento(centroides);
 
-	//cvShowImage("Erosion&Dilation window",src);
-	cvWaitKey(0);
+	if (debug) {
+		cvShowImage("Procesada",image);
+		cvWaitKey(0);
+
+		//destroys windows cvDestroyWindow("Opening&Closing window");
+		cvDestroyWindow("Original");
+		cvDestroyWindow("Procesada");
+	}
 
 	//releases header an dimage data
 	cvReleaseImage(&src);
 	cvReleaseImage(&image);
 
-	//destroys windows cvDestroyWindow("Opening&Closing window");
-	cvDestroyWindow("Original");
-	cvDestroyWindow("Procesada");
+	fin = clock() / (CLOCKS_PER_SEC / 1000);
 
-	return descriptor;
+	t_total = fin-ini;
+
+	prof[0] = width;
+	prof[1] = height;
+	prof[2] = n_centros;
+	prof[3] = t_total;
+	prof[4] = t_suavizado;
+	prof[5] = t_adaptive_threshold;
+	prof[6] = t_convertir_grises;
+	prof[7] = t_threshold;
+	prof[8] = t_encontrar_centroides;
+	prof[9] = t_cross_ratio;
+	prof[10] = t_buscar_mas_cercanos;
+	prof[11] = t_calcular_area;
+	prof[12] = t_cercanos_en_celdas;
+	prof[13] = t_calcular_descriptor_documento;
+	prof[14] = t_clasificar_centros;
+	prof[15] = t_encontrar_centros;
+	prof[16] = t_preprocesar;
+
+	return prof;
 }
