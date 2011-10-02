@@ -409,7 +409,7 @@ static void buscar_mas_cercanos(int 		  celda,
 	int 		*celdas_donde_buscar;
 
 	clock_t fin, ini;
-	//LOGI("buscar_mas_cercanos running");
+
 	ini = clock() / (CLOCKS_PER_SEC / 1000);
 
 	n_nodos = 0;
