@@ -38,12 +38,11 @@ IplImage *convertir_a_grises(IplImage *src) {
 
 	if (src -> nChannels == 3) {
 		src_data	 = src -> imageData;
-		src_width        = src -> width;
-		src_height       = src -> height;
+		src_width    = src -> width;
+		src_height   = src -> height;
 		src_step     = src -> widthStep;
 		src_channels = src -> nChannels;
 		ret_step	 = src_step/src_channels;
-
 
 		ret = cvCreateImage(cvSize( src -> width, src -> height ),
 							IPL_DEPTH_8U, 1 );
@@ -105,6 +104,7 @@ IplImage *adaptive_threshold (IplImage *src, int max_value, int c) {
 					}
  				}
  			}
+
  			if (((uchar)src -> imageData [y*step+x]) > ((uchar)(v_acum / p_acum) - c))
  				ret -> imageData [y*step+x] = (uchar)max_value;
  			else
@@ -122,7 +122,6 @@ IplImage *adaptive_threshold (IplImage *src, int max_value, int c) {
 }
 
 IplImage *suavizar(IplImage *src) {
-
  	int x, y, i , j, step;
 	float v_acum, p_acum;
 	IplImage *ret;

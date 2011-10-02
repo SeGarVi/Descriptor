@@ -43,7 +43,6 @@ void add_punto(lista_puntos *lista, punto *p) {
 	lista -> size++;
 }
 
-
 void add_punto_cercano(nodo_punto *nodo, punto *p, float angulo) {
 	nodo_cercano *iter, *prev, *n;
 

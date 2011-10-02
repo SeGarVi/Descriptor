@@ -13,13 +13,16 @@
 
 int main(int argc, char** argv) {
 
-	int i, j;
-	char* file_name = argc == 2 ? argv[1] : "imgs/rxm78d00-page02_2.tif.jpg";
+	int i, j, k;
+	char* file_name = argc == 2 ? argv[1] : "/home/kintaro/Dropbox/Documents/UAB/PFC/Informes/Final/imagenes/original.png";
 	float *profiling;
 	double **tiempos;
 	double *medias = (double*) malloc (14 * sizeof(double));
 	double *desviaciones = (double*) malloc (14 * sizeof(double));
-	int n_ejecuciones = 10;
+	int n_ejecuciones = 1;
+	double aux;
+
+	enable_debug();
 
 	tiempos = (double**) malloc (n_ejecuciones * sizeof(double*));
 
@@ -32,14 +35,37 @@ int main(int argc, char** argv) {
 			tiempos[i][j] = profiling[j+3];
 	}
 
-	for (j = 0; j < 14; j++)
-		medias[j] = 0;
+	for (j = 0; j < 14; j++) {
+			for (k = 2; k < n_ejecuciones ; k++) {
+				for (i = 0; i < n_ejecuciones - 1; i++) {
+					if (tiempos[i][j] > tiempos[i+1][j]) {
+						aux = tiempos[i][j];
+						tiempos[i][j] = tiempos[i+1][j];
+						tiempos[i+1][j] = aux;
+					}
+				}
+			}
+		}
 
-	for (j = 0; j<14; j++) {
-		for (i = 0; i < n_ejecuciones; i++)
-			medias[j] += tiempos[i][j];
-		medias[j] /= n_ejecuciones;
-	}
+		fprintf(stdout, "Prueba :\n");
+
+		for (i = 0; i < n_ejecuciones; i++) {
+			for (j = 0; j < 14; j++)
+				fprintf(stdout, "%f\t", tiempos[i][j]);
+			fprintf(stdout, "\n");
+		}
+
+		/*for (j = 0; j < 14; j++)
+			medias[j] = 0;
+
+		for (j = 0; j<14; j++) {
+			for (i = 0; i < n_ejecuciones; i++)
+				medias[j] += tiempos[i][j];
+			medias[j] /= n_ejecuciones;
+		}*/
+
+		for (j = 0; j < 14; j++)
+			medias[j] = tiempos[5][j];
 
 	for (j = 0; j<14; j++) {
 		for (i = 0; i < n_ejecuciones; i++)

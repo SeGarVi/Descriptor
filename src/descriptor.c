@@ -294,8 +294,6 @@ static float **calcular_descriptor_documento(lista_puntos **centros){
 static int *celdas_a_calcular(int celda_actual,
 							  int iteracion,
 							  int *n_celdas){
-	//no se tienen en cuenta los extremos en el numero de celdas!!!
-
 	int  x, y, i,  amplitud,
 		 celda_x,  celda_y,
 		 inicio_x, inicio_y,
@@ -405,7 +403,6 @@ static void buscar_mas_cercanos(int 		  celda,
 							    nodo_punto    *punt,
 							    lista_puntos **centros,
 							    IplImage 	  *src) {
-
 	nodo_punto  **mas_cercanos;
 	float		*distancias, *angulos;
 	int 		 i, j, k,  n_nodos, celda_actual, n_celdas, max_distancia;
@@ -454,7 +451,7 @@ static void buscar_mas_cercanos(int 		  celda,
 		n_nodos = i;
 	}
 
-	for (j = 2; n_nodos < cantidad_cercanos && n_nodos < n_centros - 1; j++) {					//Poner un límite (y si solo hay un punto?)
+	for (j = 2; n_nodos < cantidad_cercanos && n_nodos < n_centros - 1; j++) {
 		celdas_donde_buscar = celdas_a_calcular(celda, j, &n_celdas);
 
 		for (k = 0; k<n_celdas && celdas_donde_buscar[k]!=-1; k++) {
@@ -462,7 +459,8 @@ static void buscar_mas_cercanos(int 		  celda,
 
 			cercanos_en_celdas(celda_actual, distancias,   angulos,
 							   punt,         mas_cercanos, centros);
-			for (i = 0; i < cantidad_cercanos && distancias[i] < max_distancia; i++);
+			for (i = 0; i < cantidad_cercanos &&
+						distancias[i] < max_distancia; i++);
 			n_nodos = i;
 		}
 	}
@@ -496,7 +494,6 @@ static lista_puntos **clasificar_centros(lista_puntos *centros,
 	clock_t fin, ini;
 	ini = clock() / (CLOCKS_PER_SEC / 1000);
 
-	//LOGI("clasificar_centros running");
 	n_celdas = divisiones_ancho * divisiones_alto;
 
 	n_celdas = divisiones_ancho * divisiones_alto;
@@ -550,8 +547,6 @@ static lista_puntos **encontrar_centros(IplImage **src) {
 
 	n_centros = centros -> size;
 
-	//printf("%d\n", n_centros);
-
 	if (n_centros > cantidad_cercanos) {
 		centros_clasificados = clasificar_centros(centros,
 												  (*src) -> width,
@@ -585,7 +580,6 @@ static lista_puntos **encontrar_centros(IplImage **src) {
 	return centros_clasificados;
 }
 
-//callback function for slider , implements erosion
 static IplImage *pre_procesar(IplImage *original,
 							  IplImage *a_modificar) {
 
@@ -596,9 +590,9 @@ static IplImage *pre_procesar(IplImage *original,
 	a_modificar = convertir_a_grises(original);
 
 	if (a_modificar != 0) {
-		a_modificar = adaptive_threshold(a_modificar, 255, 9);
+		a_modificar = adaptive_threshold(a_modificar, 255, 5);
 		a_modificar = suavizar(a_modificar);
-		a_modificar = threshold(a_modificar, 210);
+		a_modificar = threshold(a_modificar, 250);
 	} else {
 		fprintf(stderr, "La imagen de origen no tiene tres canales de color");
 		exit(-1);
@@ -613,7 +607,7 @@ static IplImage *pre_procesar(IplImage *original,
 
 float *descriptor(char* file_name) {
 	float 		 **descriptor;
-	lista_puntos **centroides;
+	lista_puntos **centroides = 0;
 	float *t_preproceso;
 	clock_t fin, ini;
 	float *prof = (float *)malloc(17*sizeof(float));
@@ -623,13 +617,12 @@ float *descriptor(char* file_name) {
 	image = cvCreateImage(cvSize( src -> width, src -> height ),
 						  IPL_DEPTH_8U, 1 );
 
-	//create windows for output images
-	//cvNamedWindow("Original",1);
-	//cvNamedWindow("Procesada",1);
-
-	//cvShowImage("Original",src);
-
-	//printf("%d %d ", src -> width, src -> height);
+	if (debug) {
+		//create windows for output images
+		cvNamedWindow("Original",1);
+		cvNamedWindow("Procesada",1);
+		cvShowImage("Original",src);
+	}
 
 	width = src -> width;
 	height = src -> height;
@@ -648,7 +641,6 @@ float *descriptor(char* file_name) {
 	t_encontrar_centros = -1.0;
 	t_preprocesar = -1.0;
 
-	//LOGI("descriptor running");
 	ini = clock() / (CLOCKS_PER_SEC / 1000);
 
 	image = pre_procesar(src, image);
@@ -657,19 +649,22 @@ float *descriptor(char* file_name) {
 	if (n_centros > cantidad_cercanos)
 		descriptor = calcular_descriptor_documento(centroides);
 
-	//cvShowImage("Procesada",image);
+	if (debug) {
+		cvShowImage("Procesada",image);
+		cvShowImage("Erosion&Dilation window",src);
+		cvWaitKey(0);
 
-	//cvShowImage("Erosion&Dilation window",src);
-	//cvWaitKey(0);
+		//destroys windows cvDestroyWindow("Opening&Closing window");
+		cvDestroyWindow("Original");
+		cvDestroyWindow("Procesada");
+	}
 
 	//releases header an dimage data
 	cvReleaseImage(&src);
 	cvReleaseImage(&image);
 
-	//destroys windows cvDestroyWindow("Opening&Closing window");
-	//cvDestroyWindow("Original");
-	//cvDestroyWindow("Procesada");
-	free(centroides);
+	if (centroides != 0)
+		free(centroides);
 
 	fin = clock() / (CLOCKS_PER_SEC / 1000);
 

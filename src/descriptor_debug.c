@@ -21,9 +21,7 @@ void dibujar_centros(lista_puntos *centros, IplImage *src) {
 		cvCircle(src, cvPoint(nodo -> p ->x , nodo -> p -> y), 2,
 									  CV_RGB(0, 0, 0), 0, 1, 0);
 	}
-
 }
-
 
 void dibujar_rejilla(int divisiones_ancho, int divisiones_alto, IplImage *src) {
 	int i, ancho, alto;
@@ -44,9 +42,7 @@ void dibujar_rejilla(int divisiones_ancho, int divisiones_alto, IplImage *src) {
 	}
 }
 
-
 void dibujar_cercanos(nodo_punto *punt, IplImage *src) {
-
 	int i;
 	nodo_cercano *iter_cercano;
 
